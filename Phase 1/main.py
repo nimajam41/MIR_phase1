@@ -23,6 +23,7 @@ def prepare_text(documents, lang):
             processed_documents += [parts]
         frequency_counter = Counter(all_tokens)
         tokens_size = len(all_tokens)
+        print(tokens_size)
         sorted_token_counter = frequency_counter.most_common(len(frequency_counter))
         sorted_token_ratio = [(c[0], c[1] / tokens_size) for c in sorted_token_counter]
         stop_words = [sorted_token_counter[i][0] for i in range(40)]
