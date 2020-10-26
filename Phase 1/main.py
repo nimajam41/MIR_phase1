@@ -45,6 +45,39 @@ def prepare_text(documents, lang):
         return final_tokens, processed_documents, remaining_terms
 
 
+def positional(input_list):
+    positional_index_creation = dict()
+    # positional_index = {
+    #   term: {
+    #      docID: {
+    #         col: [pointers]     where col = title|description
+    #      }
+    #   }
+    # }
+
+    for docID in range(len(input_list)):
+        for col in range(2):
+            for ind in range(len(input_list[docID][col])):
+                term = input_list[docID][col][ind]
+                if term not in positional_index_creation.keys():  # new term
+                    positional_index_creation[term] = dict()
+                if docID not in positional_index_creation[term].keys():  # our term is found in new docID
+                    positional_index_creation[term][docID] = dict()
+                if col == 0:
+                    if "title" not in positional_index_creation[term][docID].keys():  # term in this title for first time
+                        positional_index_creation[term][docID]["title"] = [ind]
+                    else:
+                        positional_index_creation[term][docID]["title"] += [ind]
+
+                elif col == 1:
+                    if "description" not in positional_index_creation[term][docID].keys():  # term in this desc for first time
+                        positional_index_creation[term][docID]["description"] = [ind]
+                    else:
+                        positional_index_creation[term][docID]["description"] += [ind]
+
+    return positional_index_creation
+
+
 english_columns = ["description", "title"]
 english_df = pd.read_csv("data/ted_talks.csv", usecols=english_columns)
 x = len(english_df)
@@ -54,4 +87,6 @@ for i in range(x):
     description = english_df.iloc[i]["description"]
     english_documents += [[title, description]]
 english_documents_tokens, english_structured_documents, english_terms = prepare_text(english_documents, "English")
-print(english_documents_tokens)
+
+positional_index = positional(english_structured_documents)
+print(positional_index["creativ"])
