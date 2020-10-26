@@ -45,11 +45,11 @@ def prepare_text(documents, lang):
         return final_tokens, processed_documents, remaining_terms
 
 
-def positional(input_list):
+def positional(input_list):  # input_list is english_structured_documents
     positional_index_creation = dict()
     # positional_index = {
     #   term: {
-    #      docID: {
+    #      docID: {     docID is now line in excel file
     #         col: [pointers]     where col = title|description
     #      }
     #   }
@@ -78,6 +78,31 @@ def positional(input_list):
     return positional_index_creation
 
 
+def bigram(input_list):
+    bigram_creation = dict()
+    # bigram = {
+    #   sub_term: [terms]
+    # }
+
+    for docID in range(len(input_list)):
+        for col in range(2):
+            for ind in range(len(input_list[docID][col])):
+                term = input_list[docID][col][ind]
+                for i in range(0, len(term), 1):
+                    if i == 0:
+                        sub_term = "$" + term[0]
+                    elif i == len(term) - 1:
+                        sub_term = term[-1] + "$"
+                    else:
+                        sub_term = term[i:i+2]
+
+                    if sub_term not in bigram_creation.keys():
+                        bigram_creation[sub_term] = [term]
+                    elif term not in bigram_creation[sub_term]:
+                        bigram_creation[sub_term] += [term]
+    return bigram_creation
+
+
 english_columns = ["description", "title"]
 english_df = pd.read_csv("data/ted_talks.csv", usecols=english_columns)
 x = len(english_df)
@@ -89,4 +114,6 @@ for i in range(x):
 english_documents_tokens, english_structured_documents, english_terms = prepare_text(english_documents, "English")
 
 positional_index = positional(english_structured_documents)
+bigram_index = bigram(english_structured_documents)
 print(positional_index["creativ"])
+print(bigram_index["v$"])
