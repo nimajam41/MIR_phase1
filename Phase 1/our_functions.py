@@ -136,7 +136,7 @@ positional_index = dict()
 positional_index = positional(english_structured_documents, positional_index, 1, len(english_structured_documents))
 bigram_index = dict()
 bigram_index = bigram(english_structured_documents, bigram_index, 1, len(english_structured_documents))
-print(positional_index["shadow"])
-bigram_index, positional_index = insert([["hi Mars", "doors and shadows look amazing!"]], "English", bigram_index,
+bigram_index, positional_index = insert([["hi jupyter", "doors and shadows look amazing!"]], "English", bigram_index,
                                         positional_index, docs_size)
-print(positional_index["shadow"])
+print(positional_index["jupyt"])
+print(bigram_index["py"])
