@@ -84,7 +84,6 @@ def positional(input_list, positional_index_creation, start, end):  # input_list
                     else:
                         positional_index_creation[term][docID]["description"] += [ind]
 
-    return positional_index_creation
 
 
 def bigram(input_list, bigram_creation, start, end):
@@ -108,16 +107,48 @@ def bigram(input_list, bigram_creation, start, end):
                         bigram_creation[sub_term] = [term]
                     elif term not in bigram_creation[sub_term]:
                         bigram_creation[sub_term] += [term]
-    return bigram_creation
 
 
-def insert(documents, lang, bigram_index, positional_index, docs_size):
+def insert(documents, lang, bigram_index, positional_index, docs_size, deleted_list):
     doc_tokens, docs_structured, doc_terms, doc_stops = prepare_text(documents, lang, stop_words_dic[lang])
     print(docs_structured, len(documents))
-    bigram_index = bigram(docs_structured, bigram_index, docs_size + 1, docs_size + len(documents))
-    positional_index = positional(docs_structured, positional_index, docs_size + 1, docs_size + len(documents))
+    bigram(docs_structured, bigram_index, docs_size + 1, docs_size + len(documents))
+    positional(docs_structured, positional_index, docs_size + 1, docs_size + len(documents))
     docs_size += len(documents)
+    for _ in range(len(documents)):
+        deleted_list += [False]
     return bigram_index, positional_index
+
+
+def delete(documents, doc_id, bigram_index, positional_index, deleted_list):
+    if not deleted_list[doc_id]:
+        document = documents[doc_id]
+        for part in document:
+            for term in part:
+                positional_index[term]["cf"] -= 1
+                if doc_id in positional_index[term].keys():
+                    del positional_index[term][doc_id]
+                if positional_index[term]["cf"] == 0:
+                    first = '$' + term[0]
+                    last = term[len(term) - 1] + '$'
+                    if term in bigram_index[first]:
+                        bigram_index[first].remove(term)
+                    if len(bigram_index[first]) == 0:
+                        del bigram_index[first]
+                    if term in bigram_index[last]:
+                        bigram_index[last].remove(term)
+                    if len(bigram_index[last]) == 0:
+                        del bigram_index[last]
+                    for i in range(1, len(term) - 1):
+                        s = term[i:i + 2]
+                        if term in bigram_index[s]:
+                            bigram_index[s].remove(term)
+                        if len(bigram_index[s]) == 0:
+                            del bigram_index[s]
+                    del positional_index[term]
+        deleted_list[doc_id] = True
+    else:
+        print("this docID (" + str(doc_id) + ") does not exist in the documents set!")
 
 
 english_columns = ["description", "title"]
@@ -133,10 +164,11 @@ english_documents_tokens, english_structured_documents, english_terms, english_s
 stop_words_dic = {"English": english_stops}
 docs_size = len(english_structured_documents)
 positional_index = dict()
-positional_index = positional(english_structured_documents, positional_index, 1, len(english_structured_documents))
+positional(english_structured_documents, positional_index, 1, len(english_structured_documents))
 bigram_index = dict()
-bigram_index = bigram(english_structured_documents, bigram_index, 1, len(english_structured_documents))
-bigram_index, positional_index = insert([["hi jupyter", "doors and shadows look amazing!"]], "English", bigram_index,
-                                        positional_index, docs_size)
-print(positional_index["jupyt"])
-print(bigram_index["py"])
+bigram(english_structured_documents, bigram_index, 1, len(english_structured_documents))
+deleted_list = [False for _ in range(len(english_structured_documents))]
+delete(english_structured_documents, 2549, bigram_index, positional_index, deleted_list)
+delete(english_structured_documents, 2542, bigram_index, positional_index, deleted_list)
+delete(english_structured_documents, 2549, bigram_index, positional_index, deleted_list)
+print(positional_index["citi"])
