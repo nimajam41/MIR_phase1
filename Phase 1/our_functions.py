@@ -4,6 +4,8 @@ from collections import Counter
 from nltk.stem import SnowballStemmer
 import matplotlib.pyplot as plt
 from os import system
+import pickle
+import numpy as np
 
 
 def prepare_text(documents, lang, stop_words):
@@ -284,6 +286,58 @@ while True:
             insert(new_docs, lang, bigram_index[lang], positional_index[lang])
             print(docs_size[lang])
             print(len(deleted_documents[lang]))
+    elif split_text[0] == "save":
+        if len(split_text) != 3:
+            print("not a valid command!")
+            continue
+        type_of_indexing = split_text[1]
+        lang = split_text[2]
+        if (not lang == "english") and (not lang == "persian"):
+            print("this language " + lang + " is not supported")
+        else:
+            if lang == "english" and type_of_indexing == "positional":
+                with open('positional_english_indexing', 'wb') as pickle_file:
+                    pickle.dump(positional_index["english"], pickle_file)
+                    pickle_file.close()
+            elif lang == "english" and type_of_indexing == "bigram":
+                with open('bigram_english_indexing', 'wb') as pickle_file:
+                    pickle.dump(bigram_index["english"], pickle_file)
+                    pickle_file.close()
+            elif lang == "persian" and type_of_indexing == "positional":
+                with open('positional_persian_indexing', 'wb') as pickle_file:
+                    pickle.dump(positional_index["persian"], pickle_file)
+                    pickle_file.close()
+            elif lang == "persian" and type_of_indexing == "bigram":
+                with open('bigram_persian_indexing', 'wb') as pickle_file:
+                    pickle.dump(bigram_index["persian"], pickle_file)
+                    pickle_file.close()
+            print(type_of_indexing + " " + lang + " indexing saved successfully")
+    elif split_text[0] == "load":
+        if len(split_text) != 3:
+            print("not a valid command!")
+            continue
+        type_of_indexing = split_text[1]
+        lang = split_text[2]
+        if (not lang == "english") and (not lang == "persian"):
+            print("this language " + lang + " is not supported")
+        else:
+            if lang == "english" and type_of_indexing == "positional":
+                with open('positional_english_indexing', 'rb') as pickle_file:
+                    positional_index["english"] = pickle.load(pickle_file)
+                    pickle_file.close()
+            elif lang == "english" and type_of_indexing == "bigram":
+                with open('bigram_english_indexing', 'rb') as pickle_file:
+                    bigram_index["english"] = pickle.load(pickle_file)
+                    pickle_file.close()
+            elif lang == "persian" and type_of_indexing == "positional":
+                with open('positional_persian_indexing', 'rb') as pickle_file:
+                    positional_index["persian"] = pickle.load(pickle_file)
+                    pickle_file.close()
+            elif lang == "persian" and type_of_indexing == "bigram":
+                with open('bigram_persian_indexing', 'rb') as pickle_file:
+                    bigram_index["persian"] = pickle.load(pickle_file)
+                    pickle_file.close()
+            print(type_of_indexing + " " + lang + " indexing loaded successfully")
     else:
         print("not a valid command!")
 # prepare english
