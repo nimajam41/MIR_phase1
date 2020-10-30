@@ -45,15 +45,21 @@ for i in range(len(titles)):
 stemmer = Stemmer()
 
 all_tokens = []
+dictionary = []
 for i in range(len(titles)):
+    title_arr = []
+    description_arr = []
     for x in titles[i]:
         if x not in punctuation:
-            all_tokens.append(x)
+            all_tokens.append(stemmer.stem(x))
+            title_arr.append(stemmer.stem(x))
     for x in descriptions[i]:
         if x not in punctuation:
-            all_tokens.append(x)
+            all_tokens.append(stemmer.stem(x))
+            description_arr.append(stemmer.stem(x))
+    dictionary.append([title_arr, description_arr])
 
-print(all_tokens)
+print(dictionary[0])
 
 frequency_counter = Counter(all_tokens)
 tokens_size = len(all_tokens)
