@@ -3,14 +3,11 @@ from nltk import word_tokenize
 from collections import Counter
 from nltk.stem import SnowballStemmer
 import matplotlib.pyplot as plt
-from nltk.corpus import stopwords
-import nltk
-
-global stop_words_dic
+from os import system
 
 
 def prepare_text(documents, lang, stop_words):
-    if lang == "English":
+    if lang == "english":
         processed_documents = []
         all_tokens = []
         for i in range(len(documents)):
@@ -85,7 +82,6 @@ def positional(input_list, positional_index_creation, start, end):  # input_list
                         positional_index_creation[term][docID]["description"] += [ind]
 
 
-
 def bigram(input_list, bigram_creation, start, end):
     # bigram = {
     #   sub_term: [terms]
@@ -109,18 +105,23 @@ def bigram(input_list, bigram_creation, start, end):
                         bigram_creation[sub_term] += [term]
 
 
-def insert(documents, lang, bigram_index, positional_index, docs_size, deleted_list):
+def insert(documents, lang, bigram_index, positional_index):
     doc_tokens, docs_structured, doc_terms, doc_stops = prepare_text(documents, lang, stop_words_dic[lang])
-    print(docs_structured, len(documents))
-    bigram(docs_structured, bigram_index, docs_size + 1, docs_size + len(documents))
-    positional(docs_structured, positional_index, docs_size + 1, docs_size + len(documents))
-    docs_size += len(documents)
+    document_tokens[lang] += [word for word in doc_tokens]
+    structured_documents[lang] += [doc for doc in docs_structured]
+    terms[lang] += [term for term in doc_terms if term not in terms[lang]]
+    bigram(docs_structured, bigram_index, docs_size[lang] + 1, docs_size[lang] + len(documents))
+    positional(docs_structured, positional_index, docs_size[lang] + 1, docs_size[lang] + len(documents))
+    docs_size[lang] += len(documents)
     for _ in range(len(documents)):
-        deleted_list += [False]
+        deleted_documents[lang] += [False]
     return bigram_index, positional_index
 
 
 def delete(documents, doc_id, bigram_index, positional_index, deleted_list):
+    if doc_id >= len(deleted_list):
+        print("docID (" + str(doc_id + 1) + ") doesn't exist!")
+        return
     if not deleted_list[doc_id]:
         document = documents[doc_id]
         for part in document:
@@ -147,28 +148,155 @@ def delete(documents, doc_id, bigram_index, positional_index, deleted_list):
                             del bigram_index[s]
                     del positional_index[term]
         deleted_list[doc_id] = True
+        docs_size[lang] -= 1
     else:
-        print("this docID (" + str(doc_id) + ") does not exist in the documents set!")
+        print("this docID (" + str(doc_id + 1) + ") does not exist in the documents set!")
 
 
 english_columns = ["description", "title"]
 english_df = pd.read_csv("data/ted_talks.csv", usecols=english_columns)
 x = len(english_df)
-english_documents = []
+collections = {"english": [], "persian": []}
+document_tokens = {"english": [], "persian": []}
+structured_documents = {"english": [], "persian": []}
+terms = {"english": [], "persian": []}
+stop_words_dic = {"english": [], "persian": []}
+bigram_index = {"english": dict(), "persian": dict()}
+positional_index = {"english": dict(), "persian": dict()}
+docs_size = {"english": 0, "persian": 0}
+deleted_documents = {"english": 0, "persian": 0}
+
 for i in range(x):
     title = english_df.iloc[i]["title"]
     description = english_df.iloc[i]["description"]
-    english_documents += [[title, description]]
-english_documents_tokens, english_structured_documents, english_terms, english_stops = prepare_text(english_documents,
-                                                                                                    "English", [])
-stop_words_dic = {"English": english_stops}
-docs_size = len(english_structured_documents)
-positional_index = dict()
-positional(english_structured_documents, positional_index, 1, len(english_structured_documents))
-bigram_index = dict()
-bigram(english_structured_documents, bigram_index, 1, len(english_structured_documents))
-deleted_list = [False for _ in range(len(english_structured_documents))]
-delete(english_structured_documents, 2549, bigram_index, positional_index, deleted_list)
-delete(english_structured_documents, 2542, bigram_index, positional_index, deleted_list)
-delete(english_structured_documents, 2549, bigram_index, positional_index, deleted_list)
-print(positional_index["citi"])
+    collections["english"] += [[title, description]]
+while True:
+    split_text = input().split()
+    if len(split_text) == 0:
+        print("not a valid command!")
+        continue
+    if split_text[0] == "prepare":
+        if len(split_text) != 2:
+            print("not a valid command!")
+            continue
+        lang = split_text[1]
+        if (not lang == "english") and (not lang == "persian"):
+            print("this language " + lang + " is not supported")
+        else:
+            document_tokens[lang], structured_documents[lang], terms[lang], stop_words_dic[lang] = prepare_text(
+                collections[lang], lang, [])
+            docs_size[lang] = len(structured_documents[lang])
+            deleted_documents[lang] = [False for _ in range(len(structured_documents[lang]))]
+    elif split_text[0] == "create":
+        if len(split_text) != 3:
+            print("not a valid command!")
+            continue
+        if split_text[1] == "bigram":
+            lang = split_text[2]
+            if (not lang == "english") and (not lang == "persian"):
+                print("this language " + lang + " is not supported")
+            else:
+                bigram(structured_documents[lang], bigram_index[lang], 1, docs_size[lang])
+        elif split_text[1] == "positional":
+            lang = split_text[2]
+            if (not lang == "english") and (not lang == "persian"):
+                print("this language " + lang + " is not supported")
+            else:
+                positional(structured_documents[lang], positional_index[lang], 1, docs_size[lang])
+        else:
+            print("not a valid command!")
+    elif split_text[0] == "bigram":
+        if len(split_text) != 3:
+            print("not a valid command!")
+            continue
+        lang = split_text[1]
+        if (not lang == "english") and (not lang == "persian"):
+            print("this language " + lang + " is not supported")
+        else:
+            biword = split_text[2]
+            if len(biword) != 2:
+                print(biword + " is not a biword!")
+            else:
+                if biword in bigram_index[lang].keys():
+                    print(bigram_index[lang][biword])
+                else:
+                    print("biword (" + biword + ") doesn't match any word in " + lang + " documents.")
+    elif split_text[0] == "positional":
+        if len(split_text) != 3:
+            print("not a valid command!")
+            continue
+        lang = split_text[1]
+        if (not lang == "english") and (not lang == "persian"):
+            print("this language " + lang + " is not supported")
+        else:
+            term = split_text[2]
+            if term in positional_index[lang].keys():
+                print(positional_index[lang][term])
+            else:
+                print("term (" + term + ") doesn't match any term in " + lang + " documents.")
+    elif split_text[0] == "exit":
+        exit()
+    elif split_text[0] == "tokens":
+        if len(split_text) != 2:
+            print("not a valid command!")
+            continue
+        lang = split_text[1]
+        print(document_tokens[lang])
+    elif split_text[0] == "stopwords":
+        if len(split_text) != 2:
+            print("not a valid command!")
+            continue
+        lang = split_text[1]
+        print(stop_words_dic[lang])
+    elif split_text[0] == "terms":
+        if len(split_text) != 2:
+            print("not a valid command!")
+            continue
+        lang = split_text[1]
+        print(terms[lang])
+    elif split_text[0] == "delete":
+        if len(split_text) != 3:
+            print("not a valid command!")
+            continue
+        lang = split_text[1]
+        if (not lang == "english") and (not lang == "persian"):
+            print("this language " + lang + " is not supported")
+        else:
+            doc_id = int(split_text[2])
+            delete(structured_documents[lang], doc_id - 1, bigram_index[lang], positional_index[lang],
+                   deleted_documents[lang])
+    elif split_text[0] == "insert":
+        if len(split_text) != 4:
+            print("not a valid command!")
+            continue
+        lang = split_text[1]
+        if (not lang == "english") and (not lang == "persian"):
+            print("this language " + lang + " is not supported")
+        else:
+            doc_number = int(split_text[2])
+            part_number = int(split_text[3])
+            new_docs = []
+            for _ in range(doc_number):
+                new_docs += [[]]
+                for i in range(part_number):
+                    t = input()
+                    new_docs[-1] += [t]
+            insert(new_docs, lang, bigram_index[lang], positional_index[lang])
+            print(docs_size[lang])
+            print(len(deleted_documents[lang]))
+    else:
+        print("not a valid command!")
+# prepare english
+# create bigram english
+# create positional english
+# positional english jupyt
+# insert english 1 2
+# hi Jupyter!
+# city is available
+# positional english jupyt
+# positional english korppoo
+# bigram english rp
+# delete english 2550
+# positional english korppoo
+# bigram english rp
+# exit
