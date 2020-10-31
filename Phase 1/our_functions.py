@@ -4,7 +4,6 @@ from collections import Counter
 from nltk.stem import SnowballStemmer
 import matplotlib.pyplot as plt
 import pickle
-import numpy as np
 
 
 def prepare_text(documents, lang, stop_words):
@@ -163,7 +162,21 @@ def jaccard_similarity(query, term, lang):
     for bichar in query_bigrams:
         if bichar in bigram_index[lang].keys() and term in bigram_index[lang][bichar]:
             intersect_counter += 1
-    return intersect_counter / (len(query) + len(term) - intersect_counter)
+    return intersect_counter / (len(query_bigrams) + len(term) - 1 - intersect_counter)
+
+
+def correction_list(word, lang):
+    word_bigrams = []
+    for i in range(0, len(word) - 1):
+        word_bigrams += [word[i:i + 2]]
+    suggested_terms = []
+    for bichar in word_bigrams:
+        if bichar in bigram_index[lang].keys():
+            for term in bigram_index[lang][bichar]:
+                if term not in suggested_terms:
+                    if jaccard_similarity(word, term, lang) > 0.3:
+                        suggested_terms += [term]
+    return suggested_terms
 
 
 english_columns = ["description", "title"]
@@ -356,7 +369,34 @@ while True:
             print("this language " + lang + " is not supported")
         else:
             print(jaccard_similarity(split_text[2], split_text[3], lang))
-
+    elif split_text[0] == "correctionlist":
+        if len(split_text) != 3:
+            print("not a valid command!")
+            continue
+        lang = split_text[1]
+        if (not lang == "english") and (not lang == "persian"):
+            print("this language " + lang + " is not supported")
+        else:
+            print(correction_list(split_text[2], lang))
+    elif split_text[0] == "query":
+        if len(split_text) != 2:
+            print("not a valid command!")
+            continue
+        lang = split_text[1]
+        if (not lang == "english") and (not lang == "persian"):
+            print("this language " + lang + " is not supported")
+        else:
+            query = input()
+            document = [[query]]
+            query_tokens, _, _, _ = prepare_text(document, lang, stop_words_dic[lang])
+            correct_query = True
+            for token in query_tokens:
+                if token not in positional_index[lang].keys():
+                    correct_query = True
+                    suggested_list = correction_list(token, lang)
+                    print(token, suggested_list)
+            if correct_query:
+                print("no spell correction needed!")
     else:
         print("not a valid command!")
 # prepare english
