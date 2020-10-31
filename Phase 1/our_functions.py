@@ -211,6 +211,8 @@ while True:
         else:
             document_tokens[lang], structured_documents[lang], terms[lang], stop_words_dic[lang] = prepare_text(
                 collections[lang], lang, [])
+            print(document_tokens["english"][0])
+            print(structured_documents["english"][0])
             docs_size[lang] = len(structured_documents[lang])
             deleted_documents[lang] = [False for _ in range(len(structured_documents[lang]))]
     elif split_text[0] == "create":

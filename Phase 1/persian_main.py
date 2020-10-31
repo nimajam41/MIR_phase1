@@ -11,6 +11,16 @@ tree = ET.parse('data/Persian.xml')
 root = tree.getroot()
 titles = []
 descriptions = []
+
+
+def remove_punctuation_from_word(selected_word, punctuation_list):
+    final_word = ""
+    for a in selected_word:
+        if a not in punctuation_list:
+            final_word += a
+    return final_word
+
+
 for child in root:
     for sub_child in child:
         if sub_child.tag == '{http://www.mediawiki.org/xml/export-0.10/}title':
@@ -20,9 +30,10 @@ for child in root:
             for x in revision:
                 if x.tag == '{http://www.mediawiki.org/xml/export-0.10/}text':
                     descriptions.append(x.text)
-punctuation = ['!', '"', '#', '(', ')', '*', '-', ',', '.', '/', ':', '[', ']', '|', ';', '?', '،', '...', '$', '{',
+punctuation = ['!', '"', "'", '#', '(', ')', '*', '-', ',', '.', '/', ':', '[', ']', '|', ';', '?', '،', '...', '$',
+               '{',
                '}', '=', '==', '===', '>', '<', '>>', '<<', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹', '۰', '«', '||',
-               '""', "''", "&", "'''", '"""', '»', '', '–']
+               '""', "''", "&", "'''", '"""', '»', '', '–', "؛", "^"]
 normalizer = Normalizer()
 for i in range(len(titles)):
     titles[i] = normalizer.normalize(titles[i])
