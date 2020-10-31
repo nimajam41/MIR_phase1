@@ -3,7 +3,6 @@ from nltk import word_tokenize
 from collections import Counter
 from nltk.stem import SnowballStemmer
 import matplotlib.pyplot as plt
-from os import system
 import pickle
 import numpy as np
 
@@ -93,9 +92,10 @@ def bigram(input_list, bigram_creation, start, end):
         for col in range(2):
             for ind in range(len(input_list[docID - start + 1][col])):
                 term = input_list[docID - start + 1][col][ind]
-                for i in range(0, len(term), 1):
-                    if i == 0:
+                for i in range(-1, len(term), 1):
+                    if i == -1:
                         sub_term = "$" + term[0]
+
                     elif i == len(term) - 1:
                         sub_term = term[-1] + "$"
                     else:
@@ -142,7 +142,7 @@ def delete(documents, doc_id, bigram_index, positional_index, deleted_list):
                         bigram_index[last].remove(term)
                     if len(bigram_index[last]) == 0:
                         del bigram_index[last]
-                    for i in range(1, len(term) - 1):
+                    for i in range(0, len(term) - 1):
                         s = term[i:i + 2]
                         if term in bigram_index[s]:
                             bigram_index[s].remove(term)
@@ -153,6 +153,17 @@ def delete(documents, doc_id, bigram_index, positional_index, deleted_list):
         docs_size[lang] -= 1
     else:
         print("this docID (" + str(doc_id + 1) + ") does not exist in the documents set!")
+
+
+def jaccard_similarity(query, term, lang):
+    query_bigrams = []
+    for i in range(0, len(query) - 1):
+        query_bigrams += [query[i:i + 2]]
+    intersect_counter = 0
+    for bichar in query_bigrams:
+        if bichar in bigram_index[lang].keys() and term in bigram_index[lang][bichar]:
+            intersect_counter += 1
+    return intersect_counter / (len(query) + len(term) - intersect_counter)
 
 
 english_columns = ["description", "title"]
@@ -284,8 +295,6 @@ while True:
                     t = input()
                     new_docs[-1] += [t]
             insert(new_docs, lang, bigram_index[lang], positional_index[lang])
-            print(docs_size[lang])
-            print(len(deleted_documents[lang]))
     elif split_text[0] == "save":
         if len(split_text) != 3:
             print("not a valid command!")
@@ -338,6 +347,16 @@ while True:
                     bigram_index["persian"] = pickle.load(pickle_file)
                     pickle_file.close()
             print(type_of_indexing + " " + lang + " indexing loaded successfully")
+    elif split_text[0] == "jaccard":
+        if len(split_text) != 4:
+            print("not a valid command!")
+            continue
+        lang = split_text[1]
+        if (not lang == "english") and (not lang == "persian"):
+            print("this language " + lang + " is not supported")
+        else:
+            print(jaccard_similarity(split_text[2], split_text[3], lang))
+
     else:
         print("not a valid command!")
 # prepare english
