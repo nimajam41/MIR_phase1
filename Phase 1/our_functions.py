@@ -165,7 +165,7 @@ def jaccard_similarity(query, term, lang):
     return intersect_counter / (len(query_bigrams) + len(term) - 1 - intersect_counter)
 
 
-def correction_list(word, lang):
+def correction_list(word, lang, threshold):
     word_bigrams = []
     for i in range(0, len(word) - 1):
         word_bigrams += [word[i:i + 2]]
@@ -174,9 +174,24 @@ def correction_list(word, lang):
         if bichar in bigram_index[lang].keys():
             for term in bigram_index[lang][bichar]:
                 if term not in suggested_terms:
-                    if jaccard_similarity(word, term, lang) > 0.3:
+                    if jaccard_similarity(word, term, lang) > threshold:
                         suggested_terms += [term]
     return suggested_terms
+
+
+def edit_distance(query, term):
+    dp = [[0 for _ in range(len(term) + 1)] for _ in range(len(query) + 1)]
+    for i in range(len(query) + 1):
+        dp[i][0] = i
+    for j in range(len(term) + 1):
+        dp[0][j] = j
+    for i in range(1, len(query) + 1):
+        for j in range(1, len(term) + 1):
+            if query[i - 1] == term[j - 1]:
+                dp[i][j] = dp[i - 1][j - 1]
+            else:
+                dp[i][j] = min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + 1)
+    return dp[len(query)][len(term)]
 
 
 english_columns = ["description", "title"]
@@ -211,8 +226,6 @@ while True:
         else:
             document_tokens[lang], structured_documents[lang], terms[lang], stop_words_dic[lang] = prepare_text(
                 collections[lang], lang, [])
-            print(document_tokens["english"][0])
-            print(structured_documents["english"][0])
             docs_size[lang] = len(structured_documents[lang])
             deleted_documents[lang] = [False for _ in range(len(structured_documents[lang]))]
     elif split_text[0] == "create":
@@ -263,6 +276,7 @@ while True:
             else:
                 print("term (" + term + ") doesn't match any term in " + lang + " documents.")
     elif split_text[0] == "exit":
+        # edit_distance("nima", "sepehr")
         exit()
     elif split_text[0] == "tokens":
         if len(split_text) != 2:
@@ -379,7 +393,21 @@ while True:
         if (not lang == "english") and (not lang == "persian"):
             print("this language " + lang + " is not supported")
         else:
-            print(correction_list(split_text[2], lang))
+            corrected_list = []
+            threshold = 0.4
+            while len(corrected_list) == 0:
+                corrected_list = correction_list(split_text[2], lang, threshold)
+                threshold -= 0.1
+            print(corrected_list)
+    elif split_text[0] == "editdistance":
+        if len(split_text) != 4:
+            print("not a valid command!")
+            continue
+        lang = split_text[1]
+        if (not lang == "english") and (not lang == "persian"):
+            print("this language " + lang + " is not supported")
+        else:
+            print(edit_distance(split_text[2], split_text[3]))
     elif split_text[0] == "query":
         if len(split_text) != 2:
             print("not a valid command!")
@@ -392,13 +420,30 @@ while True:
             document = [[query]]
             query_tokens, _, _, _ = prepare_text(document, lang, stop_words_dic[lang])
             correct_query = True
+            correction = []
             for token in query_tokens:
                 if token not in positional_index[lang].keys():
-                    correct_query = True
-                    suggested_list = correction_list(token, lang)
-                    print(token, suggested_list)
+                    correct_query = False
+                    threshold = 0.4
+                    suggested_list = []
+                    while len(suggested_list) == 0:
+                        suggested_list = correction_list(token, lang, threshold)
+                        threshold -= 0.1
+                    edit_distances = []
+                    for term in suggested_list:
+                        edit_distances += [edit_distance(token, term)]
+                    ind = edit_distances.index(min(edit_distances))
+                    correction += [suggested_list[ind]]
+                else:
+                    correction += [token]
+
             if correct_query:
                 print("no spell correction needed!")
+            else:
+                str = "suggested correction for the query:"
+                for word in correction:
+                    str += (" " + word)
+                print(str)
     else:
         print("not a valid command!")
 # prepare english
