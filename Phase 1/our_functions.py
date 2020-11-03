@@ -194,6 +194,39 @@ def edit_distance(query, term):
     return dp[len(query)][len(term)]
 
 
+def get_gama_code(number):
+    number = bin(number).replace("0b", "")
+    result = ""
+    for i in range(len(number) - 1):
+        result += "1"
+    result += "0"
+    for i in range(len(number) - 1):
+        result += number[i + 1]
+    return result  # type (result) is string
+
+
+def get_variable_byte(number):
+    number = bin(number).replace("0b", "")
+    size = len(number)
+    if int(size / 7) != size / 7:
+        list_size = size // 7 + 1
+    else:
+        list_size = size // 7
+    result = ["" for _ in range(list_size)]
+    pointer = size
+    for i in range(list_size - 1, 0, -1):
+        if i == list_size - 1:
+            result[i] = "1"
+        else:
+            result[i] = "0"
+        result[i] += number[pointer - 7:pointer]
+        pointer -= 7
+    for i in range(8 - pointer):
+        result[0] += "0"
+    result[0] += number[0:pointer]
+    return result  # result is a list of strings which length of strings is 8
+
+
 english_columns = ["description", "title"]
 english_df = pd.read_csv("data/ted_talks.csv", usecols=english_columns)
 x = len(english_df)
