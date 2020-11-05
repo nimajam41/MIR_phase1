@@ -30,6 +30,7 @@ for child in root:
             for x in revision:
                 if x.tag == '{http://www.mediawiki.org/xml/export-0.10/}text':
                     descriptions.append(x.text)
+
 punctuation = ['!', '"', "'", '#', '(', ')', '*', '-', ',', '.', '/', ':', '[', ']', '|', ';', '?', '،', '...', '$',
                '{',
                '}', '=', '==', '===', '>', '<', '>>', '<<', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹', '۰', '«', '||',
@@ -61,16 +62,17 @@ for i in range(len(titles)):
     title_arr = []
     description_arr = []
     for x in titles[i]:
-        if x not in punctuation:
+        # x = remove_punctuation_from_word(x, punctuation)
+        if x not in punctuation and len(x) > 0:
             all_tokens.append(stemmer.stem(x))
             title_arr.append(stemmer.stem(x))
     for x in descriptions[i]:
-        if x not in punctuation:
+        # x = remove_punctuation_from_word(x, punctuation)
+        if x not in punctuation and len(x) > 0:
             all_tokens.append(stemmer.stem(x))
             description_arr.append(stemmer.stem(x))
     dictionary.append([title_arr, description_arr])
 
-print(dictionary[0])
 
 frequency_counter = Counter(all_tokens)
 tokens_size = len(all_tokens)
@@ -84,6 +86,3 @@ plt.title("Stopwords Frequencies")
 plt.xticks(r, stop_words, rotation="vertical")
 plt.show()
 
-print(len(all_tokens))
-print(y)
-print(stop_words)

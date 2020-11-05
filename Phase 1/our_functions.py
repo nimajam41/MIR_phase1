@@ -1,9 +1,22 @@
+from __future__ import unicode_literals
 import pandas as pd
 from nltk import word_tokenize
 from collections import Counter
 from nltk.stem import SnowballStemmer
 import matplotlib.pyplot as plt
 import pickle
+
+import re
+import xml.etree.ElementTree as ET
+from hazm import *
+
+
+def remove_punctuation_from_word(selected_word, punctuation_list):
+    final_word = ""
+    for a in selected_word:
+        if a not in punctuation_list:
+            final_word += a
+    return final_word
 
 
 def prepare_text(documents, lang, stop_words):
@@ -44,6 +57,85 @@ def prepare_text(documents, lang, stop_words):
                 parts[j] = [word for word in parts[j] if word not in stop_words]
                 parts[j] = [stemmer.stem(word) for word in parts[j]]
                 final_tokens += [word for word in parts[j]]
+        return final_tokens, processed_documents, remaining_terms, stop_words
+    elif lang == "persian":
+        punctuation = ['!', '"', "'", '#', '(', ')', '*', '-', ',', '.', '/', ':', '[', ']', '|', ';', '?', '،', '...',
+                       '$',
+                       '{',
+                       '}', '=', '==', '===', '>', '<', '>>', '<<', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹', '۰',
+                       '«', '||',
+                       '""', "''", "&", "'''", '"""', '»', '', '–', "؛", "^", "--", "<--", "-->"]
+        normalizer = Normalizer()
+        titles = documents[0]
+        descriptions = documents[1]
+        for i in range(len(titles)):
+            titles[i] = normalizer.normalize(titles[i])
+            titles[i] = word_tokenize(titles[i])
+            descriptions[i] = normalizer.normalize(descriptions[i])
+            descriptions[i] = word_tokenize(descriptions[i])
+            titles_array = []
+            descriptions_array = []
+            for x in titles[i]:
+                for word in x.split('|'):
+                    if len(re.findall(r'([a-zA-Z]+)', word)) == 0:
+                        titles_array.append(word)
+            for x in descriptions[i]:
+                for word in x.split('|'):
+                    if len(re.findall(r'([a-zA-Z]+)', word)) == 0:
+                        descriptions_array.append(word)
+            titles[i] = titles_array
+            descriptions[i] = descriptions_array
+
+        stemmer = Stemmer()
+
+        all_tokens = []
+        dictionary = []
+        for i in range(len(titles)):
+            title_arr = []
+            description_arr = []
+            for x in titles[i]:
+                # x = remove_punctuation_from_word(x, punctuation)
+                if x not in punctuation and len(x) > 0:
+                    all_tokens.append(stemmer.stem(x))
+                    title_arr.append(stemmer.stem(x))
+            for x in descriptions[i]:
+                # x = remove_punctuation_from_word(x, punctuation)
+                if x not in punctuation and len(x) > 0:
+                    all_tokens.append(stemmer.stem(x))
+                    description_arr.append(stemmer.stem(x))
+            dictionary.append([title_arr, description_arr])
+
+        if len(stop_words) == 0:
+            frequency_counter = Counter(all_tokens)
+            tokens_size = len(all_tokens)
+            sorted_token_counter = frequency_counter.most_common(len(frequency_counter))
+            sorted_token_ratio = [(c[0], c[1] / tokens_size) for c in sorted_token_counter]
+            stop_words = [sorted_token_counter[i][0] for i in range(40)]
+            remaining_terms = [(sorted_token_counter[i][0], sorted_token_counter[i][1]) for i in
+                               range(40, len(frequency_counter))]
+            r = range(40)
+            y = [sorted_token_counter[i][1] for i in range(40)]
+            plt.bar(r, y, color="red", align="center")
+            plt.title("Stopwords Frequencies")
+            plt.xticks(r, stop_words, rotation="vertical")
+            plt.show()
+        else:
+            remaining_terms = []
+        final_tokens = []
+        for word in all_tokens:
+            if word not in stop_words:
+                final_tokens.append(word)
+        processed_documents = []
+        for doc in dictionary:
+            processed_title_document = []
+            processed_description_document = []
+            for word in doc[0]:
+                if word not in stop_words:
+                    processed_title_document.append(word)
+            for word in doc[1]:
+                if word not in stop_words:
+                    processed_description_document.append(word)
+            processed_documents.append([processed_title_document, processed_description_document])
         return final_tokens, processed_documents, remaining_terms, stop_words
 
 
@@ -244,6 +336,22 @@ for i in range(x):
     title = english_df.iloc[i]["title"]
     description = english_df.iloc[i]["description"]
     collections["english"] += [[title, description]]
+
+tree = ET.parse('data/Persian.xml')
+root = tree.getroot()
+titles = []
+descriptions = []
+for child in root:
+    for sub_child in child:
+        if sub_child.tag == '{http://www.mediawiki.org/xml/export-0.10/}title':
+            titles.append(sub_child.text)
+        if sub_child.tag == '{http://www.mediawiki.org/xml/export-0.10/}revision':
+            revision = sub_child
+            for x in revision:
+                if x.tag == '{http://www.mediawiki.org/xml/export-0.10/}text':
+                    descriptions.append(x.text)
+collections["persian"].extend([titles, descriptions])
+
 while True:
     split_text = input().split()
     if len(split_text) == 0:
