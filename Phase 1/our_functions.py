@@ -427,12 +427,6 @@ while True:
                 print("this language " + lang + " is not supported")
             else:
                 positional(structured_documents[lang], positional_index[lang], 1, docs_size[lang])
-        elif split_text[1] == "variable_byte":
-            lang = split_text[2]
-            if (not lang == "english") and (not lang == "persian"):
-                print("this language " + lang + " is not supported")
-            else:
-                positional_index_to_variable_byte(positional_index[lang], vb_positional_index[lang])
         else:
             print("not a valid command!")
     elif split_text[0] == "bigram":
@@ -464,6 +458,15 @@ while True:
                 print(positional_index[lang][term])
             else:
                 print("term (" + term + ") doesn't match any term in " + lang + " documents.")
+    elif split_text[0] == "compress":
+        if split_text[1] == "variable_byte":
+            lang = split_text[2]
+            if (not lang == "english") and (not lang == "persian"):
+                print("this language " + lang + " is not supported")
+            else:
+                positional_index_to_variable_byte(positional_index[lang], vb_positional_index[lang])
+        elif split_text[1] == "gama_code":  # TODO
+            pass
     elif split_text[0] == "exit":
         exit()
     elif split_text[0] == "tokens":
