@@ -1,17 +1,16 @@
 from __future__ import unicode_literals
-
-import math
-
-import pandas as pd
 from nltk import word_tokenize
 from collections import Counter
 from nltk.stem import SnowballStemmer
+from hazm import *
+import math
+import sys
+import pandas as pd
 import matplotlib.pyplot as plt
 import pickle
-
 import re
 import xml.etree.ElementTree as ET
-from hazm import *
+
 
 
 def remove_punctuation_from_word(selected_word, punctuation_list):
@@ -300,26 +299,24 @@ def get_gama_code(number):
     return result  # type (result) is string
 
 
-def get_variable_byte(number):
+def create_variable_byte(number, col):  # col is "title" or "description"
     number = bin(number).replace("0b", "")
-    size = len(number)
-    if int(size / 7) != size / 7:
-        list_size = size // 7 + 1
-    else:
-        list_size = size // 7
-    result = ["" for _ in range(list_size)]
-    pointer = size
-    for i in range(list_size - 1, 0, -1):
-        if i == list_size - 1:
-            result[i] = "1"
+
+    while len(number) % 6 != 0:
+        number = "0" + number
+    result = ""
+    byte_size = len(number) // 6
+    for i in range(byte_size):
+        if i == byte_size - 1:
+            result += "1"
         else:
-            result[i] = "0"
-        result[i] += number[pointer - 7:pointer]
-        pointer -= 7
-    for i in range(8 - pointer):
-        result[0] += "0"
-    result[0] += number[0:pointer]
-    return result  # result is a list of strings which length of strings is 8
+            result += "0"
+        result += number[6 * i:6 * (i + 1)]
+        if col == "title":
+            result += "0"
+        elif col == "description":
+            result += "1"
+    return int(result, 2).to_bytes(byte_size, sys.byteorder)  # returns bytes of data
 
 
 def doc_length(doc_id, lang):
