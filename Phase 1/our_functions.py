@@ -1,4 +1,7 @@
 from __future__ import unicode_literals
+
+import math
+
 import pandas as pd
 from nltk import word_tokenize
 from collections import Counter
@@ -319,6 +322,36 @@ def get_variable_byte(number):
     return result  # result is a list of strings which length of strings is 8
 
 
+def doc_length(doc_id, lang):
+    doc_terms = []
+    document = structured_documents[lang][doc_id]
+    for part in document:
+        for word in part:
+            doc_terms += [word]
+    length = 0
+    counted_terms = Counter(doc_terms)
+    for word in counted_terms.keys():
+        length += (counted_terms[word] ** 2)
+    return length
+
+
+def tf_idf(query, doc_id, lang, q_length):
+    result = 0
+    for term in query.keys():
+        q_tf = query[term]
+        p = positional_index[lang][term]
+        df = len(p.keys()) - 1
+        idf = math.log(len(structured_documents[lang]) / df)
+        if doc_id - 1 in p.keys():
+            tf = 0
+            if "title" in p[doc_id - 1].keys():
+                tf += len(p[doc_id - 1]["title"])
+            if "description" in p[doc_id - 1].keys():
+                tf += len(p[doc_id - 1]["description"])
+            result += ((tf * idf) / doc_length(doc_id, lang)) * (q_tf / q_length)
+        return result
+
+
 english_columns = ["description", "title"]
 english_df = pd.read_csv("data/ted_talks.csv", usecols=english_columns)
 x = len(english_df)
@@ -417,7 +450,6 @@ while True:
             else:
                 print("term (" + term + ") doesn't match any term in " + lang + " documents.")
     elif split_text[0] == "exit":
-        # edit_distance("nima", "sepehr")
         exit()
     elif split_text[0] == "tokens":
         if len(split_text) != 2:
@@ -585,8 +617,12 @@ while True:
                 for word in correction:
                     str += (" " + word)
                 print(str)
+            query_dict = Counter(correction)
+            q_length = sum(query_dict[t] ** 2 for t in query_dict.keys())
+            print(tf_idf(query_dict, 1, lang, q_length))
     else:
         print("not a valid command!")
+
 # prepare english
 # create bigram english
 # create positional english
