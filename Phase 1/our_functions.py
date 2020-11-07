@@ -308,19 +308,31 @@ def create_variable_byte(number, col):  # col is "title" or "description"
     return int(result, 2).to_bytes(byte_size, sys.byteorder)  # returns bytes of data
 
 
+def decode_variable_byte(number):
+    number = format(int.from_bytes(number, sys.byteorder),'b' )
+    while len(number) % 8 != 0:
+        result = "0" + number
+    byte_size = len(number) // 8
+    result = ""
+    for i in range(byte_size):
+        result += number[8 * i + 1 :8 * i + 7]
+    col = (number[-1] == "0") * "title" + (number[-1] == "1") * "description"
+    return int(result, 2), col
+
+
 def positional_index_to_variable_byte(positional_index, vb_positional_index):
 
     for term in positional_index.keys():
         for doc_id in positional_index[term].keys():
+            if term not in vb_positional_index.keys():
+                vb_positional_index[term] = dict()
+            if doc_id not in vb_positional_index[term].keys():
+                vb_positional_index[term][doc_id] = dict()
             if doc_id == "cf":
+                vb_positional_index[term]["cf"] = positional_index[term]["cf"]
                 continue
             for col in positional_index[term][doc_id].keys():
                 for i in range(len(positional_index[term][doc_id][col])):
-                    if term not in vb_positional_index.keys():
-                        vb_positional_index[term] = dict()
-                    if doc_id not in vb_positional_index[term].keys():
-                        vb_positional_index[term][doc_id] = dict()
-
                     if i == 0:
                         vb_positional_index[term][doc_id] = [
                             create_variable_byte(positional_index[term][doc_id][col][i], col)]
@@ -328,6 +340,26 @@ def positional_index_to_variable_byte(positional_index, vb_positional_index):
                         vb_positional_index[term][doc_id] += [
                             create_variable_byte(positional_index[term][doc_id][col][i]
                                                  - positional_index[term][doc_id][col][i - 1], col)]
+
+
+def variable_byte_to_positional_index(vb_positional_index, positional_index):
+    dict(positional_index).clear()
+    for term in vb_positional_index.keys():
+        for doc_id in vb_positional_index[term].keys():
+            if term not in positional_index.keys():
+                positional_index[term] = dict()
+            if doc_id not in positional_index[term].keys():
+                positional_index[term][doc_id] = dict()
+            if doc_id == "cf":
+                positional_index[term]["cf"] = vb_positional_index[term]["cf"]
+                continue
+            for i in range(len(vb_positional_index[term][doc_id])):
+                gap, col = decode_variable_byte(vb_positional_index[term][doc_id][i])
+                if col not in positional_index[term][doc_id].keys():
+                    positional_index[term][doc_id][col] = [gap]
+                else:
+                    last_value = positional_index[term][doc_id][col][-1]
+                    positional_index[term][doc_id][col] += [last_value + gap]
 
 
 def doc_length(doc_id, lang):
@@ -465,6 +497,15 @@ while True:
                 print("this language " + lang + " is not supported")
             else:
                 positional_index_to_variable_byte(positional_index[lang], vb_positional_index[lang])
+        elif split_text[1] == "gama_code":  # TODO
+            pass
+    elif split_text[0] == "decompress":
+        if split_text[1] == "variable_byte":
+            lang = split_text[2]
+            if (not lang == "english") and (not lang == "persian"):
+                print("this language " + lang + " is not supported")
+            else:
+                variable_byte_to_positional_index(vb_positional_index[lang], positional_index[lang])
         elif split_text[1] == "gama_code":  # TODO
             pass
     elif split_text[0] == "exit":
