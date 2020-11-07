@@ -12,7 +12,6 @@ import re
 import xml.etree.ElementTree as ET
 
 
-
 def remove_punctuation_from_word(selected_word, punctuation_list):
     final_word = ""
     for a in selected_word:
@@ -142,13 +141,6 @@ def prepare_text(documents, lang, stop_words):
 
 
 def positional(input_list, positional_index_creation, start, end):  # input_list is english_structured_documents
-    # positional_index = {
-    #   term: {
-    #      docID: {     docID is now line in excel file
-    #         col: [pointers]     where col = title|description
-    #      }
-    #   }
-    # }
 
     for docID in range(start - 1, end):
         for col in range(2):
@@ -177,9 +169,6 @@ def positional(input_list, positional_index_creation, start, end):  # input_list
 
 
 def bigram(input_list, bigram_creation, start, end):
-    # bigram = {
-    #   sub_term: [terms]
-    # }
 
     for docID in range(start - 1, end):
         for col in range(2):
@@ -319,6 +308,28 @@ def create_variable_byte(number, col):  # col is "title" or "description"
     return int(result, 2).to_bytes(byte_size, sys.byteorder)  # returns bytes of data
 
 
+def positional_index_to_variable_byte(positional_index, vb_positional_index):
+
+    for term in positional_index.keys():
+        for doc_id in positional_index[term].keys():
+            if doc_id == "cf":
+                continue
+            for col in positional_index[term][doc_id].keys():
+                for i in range(len(positional_index[term][doc_id][col])):
+                    if term not in vb_positional_index.keys():
+                        vb_positional_index[term] = dict()
+                    if doc_id not in vb_positional_index[term].keys():
+                        vb_positional_index[term][doc_id] = dict()
+
+                    if i == 0:
+                        vb_positional_index[term][doc_id] = [
+                            create_variable_byte(positional_index[term][doc_id][col][i], col)]
+                    else:
+                        vb_positional_index[term][doc_id] += [
+                            create_variable_byte(positional_index[term][doc_id][col][i]
+                                                 - positional_index[term][doc_id][col][i - 1], col)]
+
+
 def doc_length(doc_id, lang):
     doc_terms = []
     document = structured_documents[lang][doc_id]
@@ -359,6 +370,7 @@ terms = {"english": [], "persian": []}
 stop_words_dic = {"english": [], "persian": []}
 bigram_index = {"english": dict(), "persian": dict()}
 positional_index = {"english": dict(), "persian": dict()}
+vb_positional_index = {"english": dict(), "persian": dict()}
 docs_size = {"english": 0, "persian": 0}
 deleted_documents = {"english": 0, "persian": 0}
 
@@ -415,6 +427,12 @@ while True:
                 print("this language " + lang + " is not supported")
             else:
                 positional(structured_documents[lang], positional_index[lang], 1, docs_size[lang])
+        elif split_text[1] == "variable_byte":
+            lang = split_text[2]
+            if (not lang == "english") and (not lang == "persian"):
+                print("this language " + lang + " is not supported")
+            else:
+                positional_index_to_variable_byte(positional_index[lang], vb_positional_index[lang])
         else:
             print("not a valid command!")
     elif split_text[0] == "bigram":
