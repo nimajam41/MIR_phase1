@@ -497,6 +497,14 @@ while True:
                 print("this language " + lang + " is not supported")
             else:
                 positional_index_to_variable_byte(positional_index[lang], vb_positional_index[lang])
+                if lang == "english":
+                    with open('variable_byte_english', 'wb') as pickle_file:
+                        pickle.dump(vb_positional_index, pickle_file)
+                        pickle_file.close()
+                elif lang == "persian":
+                    with open('variable_byte_persian', 'wb') as pickle_file:
+                        pickle.dump(vb_positional_index, pickle_file)
+                        pickle_file.close()
         elif split_text[1] == "gama_code":  # TODO
             pass
     elif split_text[0] == "decompress":
@@ -505,6 +513,14 @@ while True:
             if (not lang == "english") and (not lang == "persian"):
                 print("this language " + lang + " is not supported")
             else:
+                if lang == "english":
+                    with open('variable_byte_english', 'rb') as pickle_file:
+                        vb_positional_index["english"] = pickle.load(pickle_file)
+                        pickle_file.close()
+                elif lang == "persian":
+                    with open('variable_byte_persian', 'rb') as pickle_file:
+                        vb_positional_index["persian"] = pickle.load(pickle_file)
+                        pickle_file.close()
                 variable_byte_to_positional_index(vb_positional_index[lang], positional_index[lang])
         elif split_text[1] == "gama_code":  # TODO
             pass
