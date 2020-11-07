@@ -68,24 +68,29 @@ def prepare_text(documents, lang, stop_words):
                        '""', "''", "&", "'''", '"""', '»', '', '–', "؛", "^", "--", "<--", "-->"]
         normalizer = Normalizer()
         titles = documents[0]
-        descriptions = documents[1]
+        descriptions = []
+        if len(documents) == 2:
+            descriptions = documents[1]
         for i in range(len(titles)):
             titles[i] = normalizer.normalize(titles[i])
             titles[i] = word_tokenize(titles[i])
-            descriptions[i] = normalizer.normalize(descriptions[i])
-            descriptions[i] = word_tokenize(descriptions[i])
+            if len(descriptions) != 0:
+                descriptions[i] = normalizer.normalize(descriptions[i])
+                descriptions[i] = word_tokenize(descriptions[i])
             titles_array = []
             descriptions_array = []
             for x in titles[i]:
                 for word in x.split('|'):
                     if len(re.findall(r'([a-zA-Z]+)', word)) == 0:
                         titles_array.append(word)
-            for x in descriptions[i]:
-                for word in x.split('|'):
-                    if len(re.findall(r'([a-zA-Z]+)', word)) == 0:
-                        descriptions_array.append(word)
+            if len(descriptions) != 0:
+                for x in descriptions[i]:
+                    for word in x.split('|'):
+                        if len(re.findall(r'([a-zA-Z]+)', word)) == 0:
+                            descriptions_array.append(word)
             titles[i] = titles_array
-            descriptions[i] = descriptions_array
+            if len(descriptions) != 0:
+                descriptions[i] = descriptions_array
 
         stemmer = Stemmer()
 
@@ -99,11 +104,12 @@ def prepare_text(documents, lang, stop_words):
                 if x not in punctuation and len(x) > 0:
                     all_tokens.append(stemmer.stem(x))
                     title_arr.append(stemmer.stem(x))
-            for x in descriptions[i]:
-                # x = remove_punctuation_from_word(x, punctuation)
-                if x not in punctuation and len(x) > 0:
-                    all_tokens.append(stemmer.stem(x))
-                    description_arr.append(stemmer.stem(x))
+            if len(descriptions) != 0:
+                for x in descriptions[i]:
+                    # x = remove_punctuation_from_word(x, punctuation)
+                    if x not in punctuation and len(x) > 0:
+                        all_tokens.append(stemmer.stem(x))
+                        description_arr.append(stemmer.stem(x))
             dictionary.append([title_arr, description_arr])
 
         if len(stop_words) == 0:
@@ -169,24 +175,24 @@ def positional(input_list, positional_index_creation, start, end):  # input_list
 
 
 def bigram(input_list, bigram_creation, start, end):
-
     for docID in range(start - 1, end):
         for col in range(2):
             for ind in range(len(input_list[docID - start + 1][col])):
                 term = input_list[docID - start + 1][col][ind]
-                for i in range(-1, len(term), 1):
-                    if i == -1:
-                        sub_term = "$" + term[0]
+                if len(term) != 0:
+                    for i in range(-1, len(term), 1):
+                        if i == -1:
+                            sub_term = "$" + term[0]
 
-                    elif i == len(term) - 1:
-                        sub_term = term[-1] + "$"
-                    else:
-                        sub_term = term[i:i + 2]
+                        elif i == len(term) - 1:
+                            sub_term = term[-1] + "$"
+                        else:
+                            sub_term = term[i:i + 2]
 
-                    if sub_term not in bigram_creation.keys():
-                        bigram_creation[sub_term] = [term]
-                    elif term not in bigram_creation[sub_term]:
-                        bigram_creation[sub_term] += [term]
+                        if sub_term not in bigram_creation.keys():
+                            bigram_creation[sub_term] = [term]
+                        elif term not in bigram_creation[sub_term]:
+                            bigram_creation[sub_term] += [term]
 
 
 def insert(documents, lang, bigram_index, positional_index):
@@ -309,19 +315,18 @@ def create_variable_byte(number, col):  # col is "title" or "description"
 
 
 def decode_variable_byte(number):
-    number = format(int.from_bytes(number, sys.byteorder),'b' )
+    number = format(int.from_bytes(number, sys.byteorder), 'b')
     while len(number) % 8 != 0:
         result = "0" + number
     byte_size = len(number) // 8
     result = ""
     for i in range(byte_size):
-        result += number[8 * i + 1 :8 * i + 7]
+        result += number[8 * i + 1:8 * i + 7]
     col = (number[-1] == "0") * "title" + (number[-1] == "1") * "description"
     return int(result, 2), col
 
 
 def positional_index_to_variable_byte(positional_index, vb_positional_index):
-
     for term in positional_index.keys():
         for doc_id in positional_index[term].keys():
             if term not in vb_positional_index.keys():
@@ -372,7 +377,7 @@ def doc_length(doc_id, lang):
     counted_terms = Counter(doc_terms)
     for word in counted_terms.keys():
         length += (counted_terms[word] ** 2)
-    return length
+    return math.sqrt(length)
 
 
 def tf_idf(query, doc_id, lang, q_length):
@@ -381,15 +386,15 @@ def tf_idf(query, doc_id, lang, q_length):
         q_tf = query[term]
         p = positional_index[lang][term]
         df = len(p.keys()) - 1
-        idf = math.log(len(structured_documents[lang]) / df)
+        idf = math.log10(len(structured_documents[lang]) / df)
         if doc_id - 1 in p.keys():
             tf = 0
             if "title" in p[doc_id - 1].keys():
                 tf += len(p[doc_id - 1]["title"])
             if "description" in p[doc_id - 1].keys():
                 tf += len(p[doc_id - 1]["description"])
-            result += ((tf * idf) / doc_length(doc_id, lang)) * (q_tf / q_length)
-        return result
+            result += ((tf * idf) / doc_length(doc_id - 1, lang) * (q_tf / q_length))
+    return result
 
 
 english_columns = ["description", "title"]
@@ -453,12 +458,14 @@ while True:
                 print("this language " + lang + " is not supported")
             else:
                 bigram(structured_documents[lang], bigram_index[lang], 1, docs_size[lang])
+                print("creation was successful")
         elif split_text[1] == "positional":
             lang = split_text[2]
             if (not lang == "english") and (not lang == "persian"):
                 print("this language " + lang + " is not supported")
             else:
                 positional(structured_documents[lang], positional_index[lang], 1, docs_size[lang])
+                print("creation was successful")
         else:
             print("not a valid command!")
     elif split_text[0] == "bigram":
@@ -688,13 +695,20 @@ while True:
             if correct_query:
                 print("no spell correction needed!")
             else:
-                str = "suggested correction for the query:"
+                new_str = "suggested correction for the query:"
                 for word in correction:
-                    str += (" " + word)
-                print(str)
+                    new_str += (" " + word)
+                print(new_str)
             query_dict = Counter(correction)
             q_length = sum(query_dict[t] ** 2 for t in query_dict.keys())
-            print(tf_idf(query_dict, 1, lang, q_length))
+            q_length = math.sqrt(q_length)
+            scores = []
+            for doc_id in range(len(structured_documents[lang])):
+                scores += [tf_idf(query_dict, doc_id + 1, lang, q_length)]
+            top_ten = [s[0] for s in sorted(enumerate(scores), key=lambda a: a[1], reverse=True)]
+            for i in range(10):
+                print("document " + str(top_ten[i] + 1) + ":", structured_documents[lang][top_ten[i]])
+                print("ltc-lnc score:", (scores[top_ten[i]]))
     else:
         print("not a valid command!")
 
