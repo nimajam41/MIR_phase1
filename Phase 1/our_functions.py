@@ -452,7 +452,10 @@ def doc_length(doc_id, lang):
     length = 0
     counted_terms = Counter(doc_terms)
     for word in counted_terms.keys():
-        length += (counted_terms[word] ** 2)
+        df_word = len(positional_index[lang][word].keys()) - 1
+        idf_word = math.log10(len(structured_documents[lang]) / df_word)
+        tf_idf_word = counted_terms[word] * idf_word
+        length += (tf_idf_word ** 2)
     return math.sqrt(length)
 
 
