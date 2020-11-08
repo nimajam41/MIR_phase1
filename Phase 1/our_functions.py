@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import pickle
 import re
 import xml.etree.ElementTree as ET
+from bitarray import bitarray
 
 
 def remove_punctuation_from_word(selected_word, punctuation_list):
@@ -283,15 +284,90 @@ def edit_distance(query, term):
     return dp[len(query)][len(term)]
 
 
-def get_gama_code(number):
-    number = bin(number).replace("0b", "")
-    result = ""
-    for i in range(len(number) - 1):
-        result += "1"
-    result += "0"
-    for i in range(len(number) - 1):
-        result += number[i + 1]
-    return result  # type (result) is string
+def create_gamma_code(number, col):  # col is "title" or "description"
+    gamma_code = ""
+    if col == "title":
+        gamma_code += "0"
+    elif col == "description":
+        gamma_code += "1"
+
+    binary_of_number = bin(number)[2:]
+
+    if number == 0:
+        gamma_code += "0"
+    else:
+        right_section = binary_of_number[1:]
+        for i in range(len(right_section)):
+            gamma_code += "1"
+        gamma_code += "0"
+        gamma_code += right_section
+    return bitarray(gamma_code)
+
+
+def decode_gamma_code(number):
+    string_number = ""
+    for bit in number:
+        if bit:
+            string_number += "1"
+        else:
+            string_number += "0"
+    col_bit = string_number[0]
+    col = None
+    if col_bit == "0":
+        col = "title"
+    else:
+        col = "description"
+    gamma_code = string_number[1:]
+    count_of_one = 0
+    for i in range(len(gamma_code)):
+        if gamma_code[i] == "1":
+            count_of_one += 1
+        else:
+            break
+    decoded_gamma_code_to_number = "1"
+    decoded_gamma_code_to_number += gamma_code[count_of_one + 1:]
+    return int(decoded_gamma_code_to_number, 2), col
+
+
+def positional_index_to_gamma_code(positional_index, gamma_positional_index):
+    for term in positional_index.keys():
+        for doc_id in positional_index[term].keys():
+            if term not in gamma_positional_index.keys():
+                gamma_positional_index[term] = dict()
+            if doc_id not in gamma_positional_index[term].keys():
+                gamma_positional_index[term][doc_id] = dict()
+            if doc_id == "cf":
+                gamma_positional_index[term]["cf"] = positional_index[term]["cf"]
+                continue
+            for col in positional_index[term][doc_id].keys():
+                for i in range(len(positional_index[term][doc_id][col])):
+                    if i == 0:
+                        gamma_positional_index[term][doc_id] = [
+                            create_gamma_code(positional_index[term][doc_id][col][i], col)]
+                    else:
+                        gamma_positional_index[term][doc_id] += [
+                            create_gamma_code(positional_index[term][doc_id][col][i]
+                                              - positional_index[term][doc_id][col][i - 1], col)]
+
+
+def gamma_code_to_positional_index(gamma_positional_index, positional_index):
+    dict(positional_index).clear()
+    for term in gamma_positional_index.keys():
+        for doc_id in gamma_positional_index[term].keys():
+            if term not in positional_index.keys():
+                positional_index[term] = dict()
+            if doc_id not in positional_index[term].keys():
+                positional_index[term][doc_id] = dict()
+            if doc_id == "cf":
+                positional_index[term]["cf"] = gamma_positional_index[term]["cf"]
+                continue
+            for i in range(len(gamma_positional_index[term][doc_id])):
+                gap, col = decode_gamma_code(gamma_positional_index[term][doc_id][i])
+                if col not in positional_index[term][doc_id].keys():
+                    positional_index[term][doc_id][col] = [gap]
+                else:
+                    last_value = positional_index[term][doc_id][col][-1]
+                    positional_index[term][doc_id][col] += [last_value + gap]
 
 
 def create_variable_byte(number, col):  # col is "title" or "description"
@@ -379,6 +455,7 @@ def doc_length(doc_id, lang):
         length += (counted_terms[word] ** 2)
     return math.sqrt(length)
 
+
 def tf_idf(query, doc_id, lang, q_length):
     result = 0
     for term in query.keys():
@@ -407,6 +484,7 @@ stop_words_dic = {"english": [], "persian": []}
 bigram_index = {"english": dict(), "persian": dict()}
 positional_index = {"english": dict(), "persian": dict()}
 vb_positional_index = {"english": dict(), "persian": dict()}
+gamma_positional_index = {"english": dict(), "persian": dict()}
 docs_size = {"english": 0, "persian": 0}
 deleted_documents = {"english": 0, "persian": 0}
 
@@ -507,14 +585,26 @@ while True:
                 positional_index_to_variable_byte(positional_index[lang], vb_positional_index[lang])
                 if lang == "english":
                     with open('variable_byte_english', 'wb') as pickle_file:
-                        pickle.dump(vb_positional_index, pickle_file)
+                        pickle.dump(vb_positional_index["english"], pickle_file)
                         pickle_file.close()
                 elif lang == "persian":
                     with open('variable_byte_persian', 'wb') as pickle_file:
-                        pickle.dump(vb_positional_index, pickle_file)
+                        pickle.dump(vb_positional_index["persian"], pickle_file)
                         pickle_file.close()
-        elif split_text[1] == "gama_code":  # TODO
-            pass
+        elif split_text[1] == "gamma_code":
+            lang = split_text[2]
+            if (not lang == "english") and (not lang == "persian"):
+                print("this language " + lang + " is not supported")
+            else:
+                positional_index_to_gamma_code(positional_index[lang], gamma_positional_index[lang])
+                if lang == "english":
+                    with open('gamma_code_english', 'wb') as pickle_file:
+                        pickle.dump(gamma_positional_index["english"], pickle_file)
+                        pickle_file.close()
+                elif lang == "persian":
+                    with open('gamma_code_persian', 'wb') as pickle_file:
+                        pickle.dump(gamma_positional_index["persian"], pickle_file)
+                        pickle_file.close()
     elif split_text[0] == "decompress":
         if split_text[1] == "variable_byte":
             lang = split_text[2]
@@ -530,8 +620,20 @@ while True:
                         vb_positional_index["persian"] = pickle.load(pickle_file)
                         pickle_file.close()
                 variable_byte_to_positional_index(vb_positional_index[lang], positional_index[lang])
-        elif split_text[1] == "gama_code":  # TODO
-            pass
+        elif split_text[1] == "gamma_code":
+            lang = split_text[2]
+            if (not lang == "english") and (not lang == "persian"):
+                print("this language " + lang + " is not supported")
+            else:
+                if lang == "english":
+                    with open('gamma_code_english', 'rb') as pickle_file:
+                        gamma_positional_index["english"] = pickle.load(pickle_file)
+                        pickle_file.close()
+                elif lang == "persian":
+                    with open('gamma_code_persian', 'rb') as pickle_file:
+                        gamma_positional_index["persian"] = pickle.load(pickle_file)
+                        pickle_file.close()
+                gamma_code_to_positional_index(gamma_positional_index[lang], positional_index[lang])
     elif split_text[0] == "exit":
         exit()
     elif split_text[0] == "tokens":
