@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 import pickle
 import re
 import xml.etree.ElementTree as ET
-from bitarray import bitarray
 
 
 def remove_punctuation_from_word(selected_word, punctuation_list):
@@ -392,7 +391,13 @@ def create_variable_byte(number, col):  # col is "title" or "description"
 
 
 def decode_variable_byte(number):
-    number = format(int.from_bytes(number, sys.byteorder), 'b')
+    my_bytes = []
+    for byte in number:
+        my_bytes += [byte.to_bytes(1, sys.byteorder)]
+    my_bytes.reverse()
+    number = ""
+    for byte in my_bytes:
+        number += format(int.from_bytes(byte, sys.byteorder), 'b')
     while len(number) % 8 != 0:
         result = "0" + number
     byte_size = len(number) // 8
