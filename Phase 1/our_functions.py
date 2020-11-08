@@ -379,7 +379,6 @@ def doc_length(doc_id, lang):
         length += (counted_terms[word] ** 2)
     return math.sqrt(length)
 
-
 def tf_idf(query, doc_id, lang, q_length):
     result = 0
     for term in query.keys():
@@ -428,7 +427,9 @@ for child in root:
             revision = sub_child
             for x in revision:
                 if x.tag == '{http://www.mediawiki.org/xml/export-0.10/}text':
-                    descriptions.append(x.text)
+                    s = x.text
+                    new_text = re.sub("[\{\[].*?[\}\]]", "", s)
+                    descriptions.append(new_text)
 collections["persian"].extend([titles, descriptions])
 
 while True:
