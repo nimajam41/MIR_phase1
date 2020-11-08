@@ -153,7 +153,7 @@ def prepare_text(documents, lang, stop_words):
 
 
 def positional(input_list, positional_index_creation, start, end):  # input_list is english_structured_documents
-
+    positional_index_creation.clear()
     for docID in range(start - 1, end):
         for col in range(2):
             for ind in range(len(input_list[docID - start + 1][col])):
@@ -399,7 +399,7 @@ def decode_variable_byte(number):
     for byte in my_bytes:
         number += format(int.from_bytes(byte, sys.byteorder), 'b')
     while len(number) % 8 != 0:
-        result = "0" + number
+        number = "0" + number
     byte_size = len(number) // 8
     result = ""
     for i in range(byte_size):
@@ -628,6 +628,7 @@ while True:
                     with open('variable_byte_persian', 'rb') as pickle_file:
                         vb_positional_index["persian"] = pickle.load(pickle_file)
                         pickle_file.close()
+                positional_index[lang] = dict()
                 variable_byte_to_positional_index(vb_positional_index[lang], positional_index[lang])
         elif split_text[1] == "gamma_code":
             lang = split_text[2]
@@ -843,4 +844,4 @@ while True:
 # insert csv , xml
 # proximity
 # document
-#
+# korppoo
