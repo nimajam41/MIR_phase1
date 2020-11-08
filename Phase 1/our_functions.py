@@ -391,7 +391,6 @@ def create_variable_byte(number, col):  # col is "title" or "description"
 
 
 def decode_variable_byte(number):
-
     my_bytes = []
     for byte in number:
         my_bytes += [byte.to_bytes(1, sys.byteorder)]
