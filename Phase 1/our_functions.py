@@ -163,16 +163,16 @@ def positional(input_list, positional_index_creation, start, end):  # input_list
                 if col == 0:
                     if "title" not in positional_index_creation[term][
                         docID].keys():  # term in this title for first time
-                        positional_index_creation[term][docID]["title"] = [ind]
+                        positional_index_creation[term][docID]["title"] = [ind + 1]
                     else:
-                        positional_index_creation[term][docID]["title"] += [ind]
+                        positional_index_creation[term][docID]["title"] += [ind + 1]
 
                 elif col == 1:
                     if "description" not in positional_index_creation[term][
                         docID].keys():  # term in this desc for first time
-                        positional_index_creation[term][docID]["description"] = [ind]
+                        positional_index_creation[term][docID]["description"] = [ind + 1]
                     else:
-                        positional_index_creation[term][docID]["description"] += [ind]
+                        positional_index_creation[term][docID]["description"] += [ind + 1]
 
 
 def bigram(input_list, bigram_creation, start, end):
@@ -301,16 +301,11 @@ def create_gamma_code(number, col):  # col is "title" or "description"
             gamma_code += "1"
         gamma_code += "0"
         gamma_code += right_section
-    return bitarray(gamma_code)
+    return int(gamma_code, 2).to_bytes(math.ceil(len(gamma_code) / 8), sys.byteorder)
 
 
 def decode_gamma_code(number):
-    string_number = ""
-    for bit in number:
-        if bit:
-            string_number += "1"
-        else:
-            string_number += "0"
+    string_number = str(format(int.from_bytes(number, sys.byteorder), 'b'))
     col_bit = string_number[0]
     col = None
     if col_bit == "0":

@@ -1,9 +1,44 @@
 import pickle
 from bitarray import bitarray
+import sys
+import bitstring
+import math
 
 gamma_positional_index = {"english": dict(), "persian": dict()}
 main_positional_index = {"english": dict(), "persian": dict()}
 decompress = {"english": dict(), "persian": dict()}
+
+
+def create_variable_byte(number, col):  # col is "title" or "description"
+    number = bin(number).replace("0b", "")
+
+    while len(number) % 6 != 0:
+        number = "0" + number
+    result = ""
+    byte_size = len(number) // 6
+    for i in range(byte_size):
+        if i == byte_size - 1:
+            result += "1"
+        else:
+            result += "0"
+        result += number[6 * i:6 * (i + 1)]
+        if col == "title":
+            result += "0"
+        elif col == "description":
+            result += "1"
+    return int(result, 2).to_bytes(byte_size, sys.byteorder)  # returns bytes of data
+
+
+def decode_variable_byte(number):
+    number = format(int.from_bytes(number, sys.byteorder), 'b')
+    while len(number) % 8 != 0:
+        result = "0" + number
+    byte_size = len(number) // 8
+    result = ""
+    for i in range(byte_size):
+        result += number[8 * i + 1:8 * i + 7]
+    col = (number[-1] == "0") * "title" + (number[-1] == "1") * "description"
+    return int(result, 2), col
 
 
 def create_gamma_code(number, col):  # col is "title" or "description"
@@ -23,16 +58,11 @@ def create_gamma_code(number, col):  # col is "title" or "description"
             gamma_code += "1"
         gamma_code += "0"
         gamma_code += right_section
-    return bitarray(gamma_code)
+    return int(gamma_code, 2).to_bytes(math.ceil(len(gamma_code) / 8), sys.byteorder)
 
 
 def decode_gamma_code(number):
-    string_number = ""
-    for bit in number:
-        if bit:
-            string_number += "1"
-        else:
-            string_number += "0"
+    string_number = str(format(int.from_bytes(number, sys.byteorder), 'b'))
     col_bit = string_number[0]
     col = None
     if col_bit == "0":
@@ -96,7 +126,5 @@ with open('positional_english_indexing', 'rb') as pickle_file:
     main_positional_index["english"] = pickle.load(pickle_file)
     pickle_file.close()
 
-positional_index_to_gamma_code(main_positional_index["english"], gamma_positional_index["english"])
-gamma_code_to_positional_index(gamma_positional_index["english"], decompress["english"])
-# print(main_positional_index["english"])
-print(decompress["english"])
+print(create_gamma_code(45, "title"))
+print(decode_gamma_code(b'\xcd\x07'))
