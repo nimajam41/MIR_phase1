@@ -31,6 +31,12 @@ def prepare_text(documents, lang, stop_words):
             for part in document:
                 tokenized_part = word_tokenize(part)
                 case_folded_part = [word.lower() for word in tokenized_part]
+                for j in range(len(case_folded_part)):
+                    if case_folded_part[j].__contains__(",") or case_folded_part[j].__contains__("'") or \
+                            case_folded_part[j].__contains__("-") or case_folded_part[j].__contains__("?"):
+                        case_folded_part[j] = case_folded_part[j].replace(",", "").replace("'", "").replace("-",
+                                                                                                            "").replace(
+                            "?", "")
                 removed_punctuation_part = [word for word in case_folded_part if word.isalpha()]
                 parts += [removed_punctuation_part]
                 all_tokens += [word for word in removed_punctuation_part]
@@ -101,13 +107,13 @@ def prepare_text(documents, lang, stop_words):
             title_arr = []
             description_arr = []
             for x in titles[i]:
-                # x = remove_punctuation_from_word(x, punctuation)
+                x = remove_punctuation_from_word(x, punctuation)
                 if x not in punctuation and len(x) > 0:
                     all_tokens.append(stemmer.stem(x))
                     title_arr.append(stemmer.stem(x))
             if len(descriptions) != 0:
                 for x in descriptions[i]:
-                    # x = remove_punctuation_from_word(x, punctuation)
+                    x = remove_punctuation_from_word(x, punctuation)
                     if x not in punctuation and len(x) > 0:
                         all_tokens.append(stemmer.stem(x))
                         description_arr.append(stemmer.stem(x))
@@ -827,3 +833,9 @@ while True:
 # positional english korppoo
 # bigram english rp
 # exit
+
+# save stop , structure
+# insert csv , xml
+# proximity
+# document
+#
