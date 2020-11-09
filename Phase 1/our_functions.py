@@ -20,6 +20,16 @@ def remove_punctuation_from_word(selected_word, punctuation_list):
     return final_word
 
 
+def word_correction(token, punc):
+    new_word = ""
+    for i in range(len(token)):
+        if token[i] in punc:
+            new_word += " "
+        else:
+            new_word += token[i]
+    return new_word
+
+
 def prepare_text(documents, lang, stop_words):
     if lang == "english":
         processed_documents = []
@@ -71,33 +81,46 @@ def prepare_text(documents, lang, stop_words):
                        '{',
                        '}', '=', '==', '===', '>', '<', '>>', '<<', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹', '۰',
                        '«', '||',
-                       '""', "''", "&", "'''", '"""', '»', '', '–', "؛", "^", "--", "<--", "-->"]
+                       '""', "''", "&", "'''", '"""', '»', '', '–', "؛", "^", "--", "<--", "-->", "_", "--", "٬", "؟"]
         normalizer = Normalizer()
         titles = documents[0]
         descriptions = []
         if len(documents) == 2:
             descriptions = documents[1]
         for i in range(len(titles)):
+
+            titles_array = []
+            descriptions_array = []
+
+            titles[i] = word_correction(titles[i], punctuation)
+            if len(descriptions) != 0:
+                descriptions[i] = word_correction(descriptions[i], punctuation)
             titles[i] = normalizer.normalize(titles[i])
             titles[i] = word_tokenize(titles[i])
             if len(descriptions) != 0:
                 descriptions[i] = normalizer.normalize(descriptions[i])
                 descriptions[i] = word_tokenize(descriptions[i])
-            titles_array = []
-            descriptions_array = []
-            for x in titles[i]:
-                for word in x.split('|'):
-                    if len(re.findall(r'([a-zA-Z]+)', word)) == 0:
-                        titles_array.append(word)
+            for persian_word in titles[i]:
+                persian_word = persian_word.replace("\u200c", "")
+                if len(re.findall(r'([a-zA-Z]+)', persian_word)) == 0:
+                    titles_array.append(persian_word)
             if len(descriptions) != 0:
-                for x in descriptions[i]:
-                    for word in x.split('|'):
-                        if len(re.findall(r'([a-zA-Z]+)', word)) == 0:
-                            descriptions_array.append(word)
+                for persian_word in descriptions[i]:
+                    persian_word = persian_word.replace("\u200c", "")
+                    if len(re.findall(r'([a-zA-Z]+)', persian_word)) == 0:
+                        descriptions_array.append(persian_word)
             titles[i] = titles_array
             if len(descriptions) != 0:
                 descriptions[i] = descriptions_array
-
+            # for x in titles[i]:
+            #     for word in x.split('|'):
+            #         if len(re.findall(r'([a-zA-Z]+)', word)) == 0:
+            #             titles_array.append(word)
+            # if len(descriptions) != 0:
+            #     for x in descriptions[i]:
+            #         for word in x.split('|'):
+            #             if len(re.findall(r'([a-zA-Z]+)', word)) == 0:
+            #                 descriptions_array.append(word)
         stemmer = Stemmer()
 
         all_tokens = []
@@ -106,13 +129,11 @@ def prepare_text(documents, lang, stop_words):
             title_arr = []
             description_arr = []
             for x in titles[i]:
-                x = remove_punctuation_from_word(x, punctuation)
                 if x not in punctuation and len(x) > 0:
                     all_tokens.append(stemmer.stem(x))
                     title_arr.append(stemmer.stem(x))
             if len(descriptions) != 0:
                 for x in descriptions[i]:
-                    x = remove_punctuation_from_word(x, punctuation)
                     if x not in punctuation and len(x) > 0:
                         all_tokens.append(stemmer.stem(x))
                         description_arr.append(stemmer.stem(x))
@@ -514,9 +535,9 @@ for child in root:
             revision = sub_child
             for x in revision:
                 if x.tag == '{http://www.mediawiki.org/xml/export-0.10/}text':
-                    s = x.text
-                    new_text = re.sub("[\{\[].*?[\}\]]", "", s)
-                    descriptions.append(new_text)
+                    # s = x.text
+                    # new_text = re.sub("[\{\[].*?[\}\]]", "", s)
+                    descriptions.append(x.text)
 collections["persian"].extend([titles, descriptions])
 
 while True:
