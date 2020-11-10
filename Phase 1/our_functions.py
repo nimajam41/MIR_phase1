@@ -312,13 +312,7 @@ def edit_distance(query, term):
 
 def create_gamma_code(number, col):  # col is "title" or "description"
     gamma_code = ""
-    if col == "title":
-        gamma_code += "0"
-    elif col == "description":
-        gamma_code += "1"
-
     binary_of_number = bin(number)[2:]
-
     if number == 0:
         gamma_code += "0"
     else:
@@ -327,18 +321,22 @@ def create_gamma_code(number, col):  # col is "title" or "description"
             gamma_code += "1"
         gamma_code += "0"
         gamma_code += right_section
+    if col == "title":
+        gamma_code += "0"
+    elif col == "description":
+        gamma_code += "1"
     return int(gamma_code, 2).to_bytes(math.ceil(len(gamma_code) / 8), sys.byteorder)
 
 
 def decode_gamma_code(number):
     string_number = str(format(int.from_bytes(number, sys.byteorder), 'b'))
-    col_bit = string_number[0]
+    col_bit = string_number[-1]
     col = None
     if col_bit == "0":
         col = "title"
     else:
         col = "description"
-    gamma_code = string_number[1:]
+    gamma_code = string_number[:len(string_number) - 1]
     count_of_one = 0
     for i in range(len(gamma_code)):
         if gamma_code[i] == "1":
@@ -360,10 +358,15 @@ def positional_index_to_gamma_code(positional_index, gamma_positional_index):
             if doc_id == "cf":
                 gamma_positional_index[term]["cf"] = positional_index[term]["cf"]
                 continue
+            flag = False
             for col in positional_index[term][doc_id].keys():
                 for i in range(len(positional_index[term][doc_id][col])):
-                    if i == 0:
+                    if not flag:
                         gamma_positional_index[term][doc_id] = [
+                            create_gamma_code(positional_index[term][doc_id][col][i], col)]
+                        flag = True
+                    elif i == 0:
+                        gamma_positional_index[term][doc_id] += [
                             create_gamma_code(positional_index[term][doc_id][col][i], col)]
                     else:
                         gamma_positional_index[term][doc_id] += [
@@ -439,10 +442,15 @@ def positional_index_to_variable_byte(positional_index, vb_positional_index):
             if doc_id == "cf":
                 vb_positional_index[term]["cf"] = positional_index[term]["cf"]
                 continue
+            flag = False
             for col in positional_index[term][doc_id].keys():
                 for i in range(len(positional_index[term][doc_id][col])):
-                    if i == 0:
+                    if not flag:
                         vb_positional_index[term][doc_id] = [
+                            create_variable_byte(positional_index[term][doc_id][col][i], col)]
+                        flag = True
+                    elif i == 0:
+                        vb_positional_index[term][doc_id] += [
                             create_variable_byte(positional_index[term][doc_id][col][i], col)]
                     else:
                         vb_positional_index[term][doc_id] += [
@@ -535,9 +543,9 @@ for child in root:
             revision = sub_child
             for x in revision:
                 if x.tag == '{http://www.mediawiki.org/xml/export-0.10/}text':
-                    # s = x.text
-                    # new_text = re.sub("[\{\[].*?[\}\]]", "", s)
-                    descriptions.append(x.text)
+                    s = x.text
+                    new_text = re.sub("[\{\[].*?[\}\]]", "", s)
+                    descriptions.append(new_text)
 collections["persian"].extend([titles, descriptions])
 
 
@@ -622,29 +630,40 @@ while True:
             if (not lang == "english") and (not lang == "persian"):
                 print("this language " + lang + " is not supported")
             else:
-                positional_index_to_variable_byte(positional_index[lang], vb_positional_index[lang])
-                if lang == "english":
-                    with open('variable_byte_english', 'wb') as pickle_file:
-                        pickle.dump(vb_positional_index["english"], pickle_file, pickle.HIGHEST_PROTOCOL)
-                        pickle_file.close()
-                elif lang == "persian":
-                    with open('variable_byte_persian', 'wb') as pickle_file:
-                        pickle.dump(vb_positional_index["persian"], pickle_file, pickle.HIGHEST_PROTOCOL)
-                        pickle_file.close()
+                if len(positional_index[lang]) != 0:
+                    print("Positional Index Saved Successfully With Variable Byte Method")
+                    positional_index_to_variable_byte(positional_index[lang], vb_positional_index[lang])
+                    if lang == "english":
+                        with open('variable_byte_english', 'wb') as pickle_file:
+                            pickle.dump(vb_positional_index["english"], pickle_file, pickle.HIGHEST_PROTOCOL)
+                            pickle_file.close()
+                    elif lang == "persian":
+                        with open('variable_byte_persian', 'wb') as pickle_file:
+                            pickle.dump(vb_positional_index["persian"], pickle_file, pickle.HIGHEST_PROTOCOL)
+                            pickle_file.close()
+                else:
+                    print("Positional Index Is Empty!")
+
         elif split_text[1] == "gamma_code":
             lang = split_text[2]
             if (not lang == "english") and (not lang == "persian"):
                 print("this language " + lang + " is not supported")
             else:
-                positional_index_to_gamma_code(positional_index[lang], gamma_positional_index[lang])
-                if lang == "english":
-                    with open('gamma_code_english', 'wb') as pickle_file:
-                        pickle.dump(gamma_positional_index["english"], pickle_file, pickle.HIGHEST_PROTOCOL)
-                        pickle_file.close()
-                elif lang == "persian":
-                    with open('gamma_code_persian', 'wb') as pickle_file:
-                        pickle.dump(gamma_positional_index["persian"], pickle_file, pickle.HIGHEST_PROTOCOL)
-                        pickle_file.close()
+                if len(positional_index[lang]) != 0:
+                    print("Positional Index Saved Successfully With Gamma Method")
+                    positional_index_to_gamma_code(positional_index[lang], gamma_positional_index[lang])
+                    if lang == "english":
+                        with open('gamma_code_english', 'wb') as pickle_file:
+                            pickle.dump(gamma_positional_index["english"], pickle_file, pickle.HIGHEST_PROTOCOL)
+                            pickle_file.close()
+                    elif lang == "persian":
+                        with open('gamma_code_persian', 'wb') as pickle_file:
+                            pickle.dump(gamma_positional_index["persian"], pickle_file, pickle.HIGHEST_PROTOCOL)
+                            pickle_file.close()
+                else:
+                    print("Positional Index Is Empty!")
+        else:
+            print("not a valid command!")
     elif split_text[0] == "decompress":
         if split_text[1] == "variable_byte":
             lang = split_text[2]
@@ -659,8 +678,9 @@ while True:
                     with open('variable_byte_persian', 'rb') as pickle_file:
                         vb_positional_index["persian"] = pickle.load(pickle_file)
                         pickle_file.close()
-                positional_index[lang] = dict()
+                positional_index[lang].clear()
                 variable_byte_to_positional_index(vb_positional_index[lang], positional_index[lang])
+                print("Decompressed Done Successfully With Variable Byte Method")
         elif split_text[1] == "gamma_code":
             lang = split_text[2]
             if (not lang == "english") and (not lang == "persian"):
@@ -674,7 +694,11 @@ while True:
                     with open('gamma_code_persian', 'rb') as pickle_file:
                         gamma_positional_index["persian"] = pickle.load(pickle_file)
                         pickle_file.close()
+                positional_index[lang].clear()
                 gamma_code_to_positional_index(gamma_positional_index[lang], positional_index[lang])
+                print("Decompressed Done Successfully With Gamma Code Method")
+        else:
+            print("not a valid command!")
     elif split_text[0] == "exit":
         exit()
     elif split_text[0] == "tokens":
