@@ -540,6 +540,16 @@ for child in root:
                     descriptions.append(x.text)
 collections["persian"].extend([titles, descriptions])
 
+
+def check_word_is_near(arr1, arr2):
+    flag = True
+    for x1 in arr1:
+        if not arr2.__contains__(x1):
+            flag = False
+            return False
+    return True
+
+
 while True:
     split_text = input().split()
     if len(split_text) == 0:
@@ -615,11 +625,11 @@ while True:
                 positional_index_to_variable_byte(positional_index[lang], vb_positional_index[lang])
                 if lang == "english":
                     with open('variable_byte_english', 'wb') as pickle_file:
-                        pickle.dump(vb_positional_index["english"], pickle_file)
+                        pickle.dump(vb_positional_index["english"], pickle_file, pickle.HIGHEST_PROTOCOL)
                         pickle_file.close()
                 elif lang == "persian":
                     with open('variable_byte_persian', 'wb') as pickle_file:
-                        pickle.dump(vb_positional_index["persian"], pickle_file)
+                        pickle.dump(vb_positional_index["persian"], pickle_file, pickle.HIGHEST_PROTOCOL)
                         pickle_file.close()
         elif split_text[1] == "gamma_code":
             lang = split_text[2]
@@ -629,11 +639,11 @@ while True:
                 positional_index_to_gamma_code(positional_index[lang], gamma_positional_index[lang])
                 if lang == "english":
                     with open('gamma_code_english', 'wb') as pickle_file:
-                        pickle.dump(gamma_positional_index["english"], pickle_file)
+                        pickle.dump(gamma_positional_index["english"], pickle_file, pickle.HIGHEST_PROTOCOL)
                         pickle_file.close()
                 elif lang == "persian":
                     with open('gamma_code_persian', 'wb') as pickle_file:
-                        pickle.dump(gamma_positional_index["persian"], pickle_file)
+                        pickle.dump(gamma_positional_index["persian"], pickle_file, pickle.HIGHEST_PROTOCOL)
                         pickle_file.close()
     elif split_text[0] == "decompress":
         if split_text[1] == "variable_byte":
@@ -724,19 +734,19 @@ while True:
         else:
             if lang == "english" and type_of_indexing == "positional":
                 with open('positional_english_indexing', 'wb') as pickle_file:
-                    pickle.dump(positional_index["english"], pickle_file)
+                    pickle.dump(positional_index["english"], pickle_file, pickle.HIGHEST_PROTOCOL)
                     pickle_file.close()
             elif lang == "english" and type_of_indexing == "bigram":
                 with open('bigram_english_indexing', 'wb') as pickle_file:
-                    pickle.dump(bigram_index["english"], pickle_file)
+                    pickle.dump(bigram_index["english"], pickle_file, pickle.HIGHEST_PROTOCOL)
                     pickle_file.close()
             elif lang == "persian" and type_of_indexing == "positional":
                 with open('positional_persian_indexing', 'wb') as pickle_file:
-                    pickle.dump(positional_index["persian"], pickle_file)
+                    pickle.dump(positional_index["persian"], pickle_file, pickle.HIGHEST_PROTOCOL)
                     pickle_file.close()
             elif lang == "persian" and type_of_indexing == "bigram":
                 with open('bigram_persian_indexing', 'wb') as pickle_file:
-                    pickle.dump(bigram_index["persian"], pickle_file)
+                    pickle.dump(bigram_index["persian"], pickle_file, pickle.HIGHEST_PROTOCOL)
                     pickle_file.close()
             print(type_of_indexing + " " + lang + " indexing saved successfully")
     elif split_text[0] == "load":
@@ -805,7 +815,7 @@ while True:
         if (not lang == "english") and (not lang == "persian"):
             print("this language " + lang + " is not supported")
         else:
-            query = input()
+            query = input("Enter Your Query: ")
             document = [[query]]
             query_tokens, _, _, _ = prepare_text(document, lang, stop_words_dic[lang])
             correct_query = True
@@ -841,8 +851,96 @@ while True:
                 scores += [tf_idf(query_dict, doc_id + 1, lang, q_length)]
             top_ten = [s[0] for s in sorted(enumerate(scores), key=lambda a: a[1], reverse=True)]
             for i in range(10):
-                print("document " + str(top_ten[i] + 1) + ":", structured_documents[lang][top_ten[i]])
-                print("ltc-lnc score:", (scores[top_ten[i]]))
+                if not scores[top_ten[i]] == 0:
+                    print("document " + str(top_ten[i] + 1) + ":", structured_documents[lang][top_ten[i]])
+                    print("ltc-lnc score:", (scores[top_ten[i]]))
+    elif split_text[0] == "proximity" and split_text[1] == "query":
+        if len(split_text) != 3:
+            print("not a valid command!")
+            continue
+        lang = split_text[2]
+        if (not lang == "english") and (not lang == "persian"):
+            print("this language " + lang + " is not supported")
+        else:
+            proximity_len_of_window = int(input("Please Enter Size Of Window: "))
+            query = input("Enter Your Query: ")
+            document = [[query]]
+            query_tokens, _, _, _ = prepare_text(document, lang, stop_words_dic[lang])
+            correct_query = True
+            correction = []
+            for token in query_tokens:
+                if token not in positional_index[lang].keys():
+                    correct_query = False
+                    threshold = 0.4
+                    suggested_list = []
+                    while len(suggested_list) == 0:
+                        suggested_list = correction_list(token, lang, threshold)
+                        threshold -= 0.1
+                    edit_distances = []
+                    for term in suggested_list:
+                        edit_distances += [edit_distance(token, term)]
+                    ind = edit_distances.index(min(edit_distances))
+                    correction += [suggested_list[ind]]
+                else:
+                    correction += [token]
+            if correct_query:
+                print("no spell correction needed!")
+            else:
+                new_str = "suggested correction for the query:"
+                for word in correction:
+                    new_str += (" " + word)
+                print(new_str)
+            minimum_collection_frequency_in_correction_query = correction[0]
+            list_of_document_contain_all_words = []
+            for term in correction:
+                if positional_index[lang][term]["cf"] < \
+                        positional_index[lang][minimum_collection_frequency_in_correction_query]["cf"]:
+                    minimum_collection_frequency_in_correction_query = term
+            document_contain_min_term = []
+            for x in positional_index[lang][minimum_collection_frequency_in_correction_query].keys():
+                if x != "cf":
+                    document_contain_min_term.append(x)
+            for x in document_contain_min_term:
+                flag = True
+                for term in correction:
+                    if x not in positional_index[lang][term].keys():
+                        flag = False
+                        break
+                if flag:
+                    list_of_document_contain_all_words.append(x)
+            list_of_document_contain_all_words_with_proximity = []
+            for x in list_of_document_contain_all_words:
+                checked = False
+                for y in structured_documents[lang][x]:
+                    for i in range(len(y)):
+                        if i + proximity_len_of_window > len(y):
+                            break
+                        else:
+                            if check_word_is_near(correction, y[i:i + proximity_len_of_window]):
+                                list_of_document_contain_all_words_with_proximity.append(x)
+                                checked = True
+                                break
+                    if checked:
+                        break
+            if len(correction) == 1:
+                list_of_document_contain_all_words_with_proximity = list_of_document_contain_all_words
+
+            query_dict = Counter(correction)
+            q_length = sum(query_dict[t] ** 2 for t in query_dict.keys())
+            q_length = math.sqrt(q_length)
+            scores = []
+            for doc_id in list_of_document_contain_all_words_with_proximity:
+                scores += [(tf_idf(query_dict, doc_id + 1, lang, q_length), doc_id + 1)]
+            top_ten = sorted(scores, key=lambda x: x[0], reverse=True)
+            if len(top_ten) == 0:
+                print("No Result Found!!")
+            else:
+                for i in range(10):
+                    print("document " + str(top_ten[i][1]) + ":", structured_documents[lang][top_ten[i][1] - 1])
+                    print("ltc-lnc score:", top_ten[i][0])
+                    if i == len(top_ten) - 1:
+                        break
+
     else:
         print("not a valid command!")
 
